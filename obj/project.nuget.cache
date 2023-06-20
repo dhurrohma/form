@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "dgSpecHash": "/hVu/Ik0XfbMYJ9Lpe2iGgMfOcOIX7QmpqkwOg1JxGKiDGnoW/d2fAaTmQ0fEXHmhC84BsQi/rDD3u9fMYi1vg==",
+  "success": true,
+  "projectFilePath": "/home/user/Desktop/ilcs/ilcs.csproj",
+  "expectedPackageFiles": [
+    "/home/user/.nuget/packages/newtonsoft.json/13.0.3/newtonsoft.json.13.0.3.nupkg.sha512"
+  ],
+  "logs": []
+}

@@ -1,0 +1,150 @@
+﻿@page "/form"
+@using System.Net.Http
+@using Newtonsoft.Json
+
+<h3>Form</h3>
+
+<EditForm Model="@myModel" OnValidSubmit="@HandleValidSubmit">
+    <div>
+        <label>Negara:</label>
+        <InputText id="negaraInput" @bind-Value="@myModel.SelectedNegara" @oninput="SearchNegara" />
+    </div>
+
+    <div>
+        <label>Pelabuhan:</label>
+        <InputText id="pelabuhanInput" @bind-Value="@myModel.SelectedPelabuhan" @oninput="SearchPelabuhan" />
+    </div>
+
+    <div>
+        <label>Barang:</label>
+        <InputText id="barangInput" @bind-Value="@myModel.BarangID" />
+    </div>
+
+    <div>
+        <label>Harga:</label>
+        <InputText id="hargaInput" @bind-Value="@myModel.Harga" />
+    </div>
+
+    <div>
+        <label>Tarif Bea Masuk:</label>
+        <p>@myModel.TarifBeaMasuk</p>
+    </div>
+
+    <div>
+        <label>Total Harga:</label>
+        <p>@myModel.TotalHarga</p>
+    </div>
+
+    <div>
+        <button type="submit">Submit</button>
+    </div>
+</EditForm>
+
+@code {
+    private HttpClient httpClient = new HttpClient();
+    private MyModel myModel = new MyModel();
+
+    private async Task SearchNegara(ChangeEventArgs e)
+    {
+        string query = e.Value.ToString();
+        if (query.Length >= 3)
+        {
+            string apiUrl = $"https://insw-dev.ilcs.co.id/n/negara?ur_negara={query}";
+            var response = await httpClient.GetStringAsync(apiUrl);
+            var negaraResponse = JsonConvert.DeserializeObject<NegaraResponse>(response);
+            if (negaraResponse != null)
+            {
+                myModel.SelectedNegara = negaraResponse.NamaNegara;
+            }
+        }
+    }
+
+    private async Task SearchPelabuhan(ChangeEventArgs e)
+    {
+        string query = e.Value.ToString();
+        if (query.Length >= 3 && !string.IsNullOrEmpty(myModel.SelectedNegara))
+        {
+            string apiUrl = $"https://insw-dev.ilcs.co.id/n/pelabuhan?kd_negara={myModel.SelectedNegara}&ur_pelabuhan={query}";
+            var response = await httpClient.GetStringAsync(apiUrl);
+            var pelabuhanResponse = JsonConvert.DeserializeObject<PelabuhanResponse>(response);
+            if (pelabuhanResponse != null)
+            {
+                myModel.SelectedPelabuhan = pelabuhanResponse.KodePelabuhan;
+            }
+        }
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        await HitungHarga();
+    }
+
+    private async Task HitungHarga()
+    {
+        string tarifApiUrl = "https://insw-dev.ilcs.co.id/n/tarif?hs_code=10079000";
+        var response = await httpClient.GetStringAsync(tarifApiUrl);
+        var tarifResponse = JsonConvert.DeserializeObject<TarifResponse>(response);
+        if (tarifResponse != null)
+        {
+            myModel.TarifBeaMasuk = decimal.Parse(tarifResponse.TarifBeaMasuk);
+            if (decimal.TryParse(myModel.Harga, out decimal hargaDecimal))
+            {
+                myModel.TotalHarga = hargaDecimal * myModel.TarifBeaMasuk;
+            }
+        }
+    }
+
+    private async Task<string> GetFullCountryName(string countryCode)
+    {
+        string apiUrl = $"https://insw-dev.ilcs.co.id/n/negara?kd_negara={countryCode}";
+        var response = await httpClient.GetStringAsync(apiUrl);
+        var negaraResponse = JsonConvert.DeserializeObject<NegaraResponse>(response);
+        if (negaraResponse != null)
+        {
+            return negaraResponse.NamaNegara;
+        }
+        return string.Empty;
+    }
+
+    private async Task<string> GetFullPortName(string portCode)
+    {
+        if (portCode.Length == 3 && !string.IsNullOrEmpty(myModel.SelectedNegara))
+        {
+            string apiUrl = $"https://insw-dev.ilcs.co.id/n/pelabuhan?kd_negara={myModel.SelectedNegara}&kd_pelabuhan={portCode}";
+            var response = await httpClient.GetStringAsync(apiUrl);
+            var pelabuhanResponse = JsonConvert.DeserializeObject<PelabuhanResponse>(response);
+            if (pelabuhanResponse != null)
+            {
+                return pelabuhanResponse.NamaPelabuhan;
+            }
+        }
+
+        return string.Empty;
+    }
+
+    private class MyModel
+    {
+        public string SelectedNegara { get; set; }
+        public string SelectedPelabuhan { get; set; }
+        public string BarangID { get; set; }
+        public string Harga { get; set; }
+        public decimal TarifBeaMasuk { get; set; }
+        public decimal TotalHarga { get; set; }
+    }
+
+    private class NegaraResponse
+    {
+        public string NamaNegara { get; set; }
+    }
+
+    private class PelabuhanResponse
+    {
+        public string KodePelabuhan { get; set; }
+        public string NamaPelabuhan { get; set; }
+    }
+
+    private class TarifResponse
+    {
+        public string TarifBeaMasuk { get; set; }
+    }
+}
